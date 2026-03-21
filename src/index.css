@@ -1,0 +1,216 @@
+@import "tailwindcss";
+
+:root {
+  --bg-void: #020205;
+  --bg-deep: #07070f;
+  --bg-surface: #0d0d1a;
+  --bg-elevated: #12121f;
+  --bg-glass: rgba(255,255,255,0.03);
+
+  --accent-luna: #7B6EF6;
+  --accent-luna-bright: #9D93FF;
+  --accent-cyan: #00D4FF;
+  --accent-ember: #FF6B35;
+  --accent-mint: #00FFB3;
+
+  --text-primary: #F0EFF8;
+  --text-secondary: #8A8899;
+  --text-muted: #3D3C52;
+  --text-accent: #7B6EF6;
+
+  --border-subtle: rgba(123,110,246,0.12);
+  --border-glow: rgba(123,110,246,0.4);
+
+  --font-display: 'Syne', sans-serif;
+  --font-mono: 'DM Mono', monospace;
+  --font-serif: 'Instrument Serif', serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg-void);
+  color: var(--text-primary);
+  font-family: var(--font-display);
+  overflow-x: hidden;
+  cursor: none;
+}
+
+/* Custom cursor */
+.cursor-dot {
+  width: 6px; height: 6px;
+  background: var(--accent-luna-bright);
+  border-radius: 50%;
+  position: fixed; top: 0; left: 0;
+  pointer-events: none; z-index: 9999;
+  transition: transform 0.1s ease;
+}
+.cursor-ring {
+  width: 32px; height: 32px;
+  border: 1px solid rgba(123,110,246,0.5);
+  border-radius: 50%;
+  position: fixed; top: 0; left: 0;
+  pointer-events: none; z-index: 9998;
+  transition: transform 0.15s ease, width 0.2s, height 0.2s, border-color 0.2s;
+}
+.cursor-ring.hovering {
+  width: 48px; height: 48px;
+  border-color: var(--accent-luna);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: var(--bg-void); }
+::-webkit-scrollbar-thumb { background: var(--text-muted); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: var(--accent-luna); }
+
+/* Glass morphism */
+.glass {
+  background: var(--bg-glass);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--border-subtle);
+}
+
+/* Noise texture overlay */
+.noise::after {
+  content: '';
+  position: absolute; inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none; z-index: 0; border-radius: inherit;
+}
+
+/* Gradient text */
+.grad-text {
+  background: linear-gradient(135deg, var(--accent-luna-bright) 0%, var(--accent-cyan) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.grad-text-warm {
+  background: linear-gradient(135deg, #FF6B35 0%, #FFB347 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Glow effects */
+.glow-luna { box-shadow: 0 0 30px rgba(123,110,246,0.3), 0 0 60px rgba(123,110,246,0.1); }
+.glow-cyan { box-shadow: 0 0 30px rgba(0,212,255,0.3); }
+.text-glow { text-shadow: 0 0 20px rgba(123,110,246,0.5); }
+
+/* Animated gradient border */
+@keyframes borderRotate {
+  from { --angle: 0deg; }
+  to { --angle: 360deg; }
+}
+
+.border-animated {
+  border: 1px solid transparent;
+  background: linear-gradient(var(--bg-elevated), var(--bg-elevated)) padding-box,
+              linear-gradient(135deg, var(--accent-luna), var(--accent-cyan), var(--accent-luna)) border-box;
+}
+
+/* Grid background */
+.grid-bg {
+  background-image:
+    linear-gradient(rgba(123,110,246,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(123,110,246,0.04) 1px, transparent 1px);
+  background-size: 60px 60px;
+}
+
+/* Scan line effect */
+@keyframes scanline {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100vh); }
+}
+
+/* Button base */
+.btn-luna {
+  background: linear-gradient(135deg, var(--accent-luna) 0%, #5B4FD4 100%);
+  color: white;
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+.btn-luna::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(135deg, var(--accent-luna-bright) 0%, var(--accent-cyan) 100%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+.btn-luna:hover::before { opacity: 1; }
+.btn-luna:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(123,110,246,0.4); }
+
+/* Tag */
+.tag {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  padding: 4px 12px;
+  border-radius: 2px;
+  background: rgba(123,110,246,0.1);
+  border: 1px solid rgba(123,110,246,0.2);
+  color: var(--accent-luna-bright);
+}
+
+/* Input */
+.input-luna {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  font-family: var(--font-display);
+  transition: all 0.3s ease;
+  outline: none;
+}
+.input-luna:focus {
+  border-color: var(--accent-luna);
+  box-shadow: 0 0 0 3px rgba(123,110,246,0.1);
+}
+.input-luna::placeholder { color: var(--text-muted); }
+
+/* Animations */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-12px); }
+}
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+@keyframes shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-float { animation: float 4s ease-in-out infinite; }
+.animate-pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
+.animate-spin-slow { animation: spin-slow 20s linear infinite; }
+.animate-fade-up { animation: fadeInUp 0.6s ease forwards; }
+
+/* Typing cursor */
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+.typing-cursor::after {
+  content: '|';
+  animation: blink 1s step-end infinite;
+  color: var(--accent-luna-bright);
+}
