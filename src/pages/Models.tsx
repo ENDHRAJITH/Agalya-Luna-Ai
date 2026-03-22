@@ -7,26 +7,34 @@ import axios from 'axios'
 const API = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
 
 interface Model {
-  id: number
+  id: string
   name: string
   problem_description: string
   task_type: string
   status: string
   accuracy?: number
+  r2_score?: number
   created_at: string
 }
 
-const STATUS_COLORS: Record<string, string> = {
-  completed: '#00FFB3',
-  training: '#7B6EF6',
-  failed: '#FF6B35',
-  pending: '#3D3C52'
+const TASK_COLORS: Record<string, { bg: string; text: string; border: string }> = {
+  classification: { bg: 'rgba(123,110,246,0.1)', text: '#9D93FF', border: 'rgba(123,110,246,0.25)' },
+  regression:     { bg: 'rgba(0,212,255,0.1)',   text: '#00D4FF', border: 'rgba(0,212,255,0.25)' },
+  clustering:     { bg: 'rgba(0,255,179,0.1)',   text: '#00FFB3', border: 'rgba(0,255,179,0.25)' },
+}
+
+const STATUS_CFG: Record<string, { dot: string; text: string }> = {
+  completed: { dot: '#00FFB3', text: '#00FFB3' },
+  training:  { dot: '#9D93FF', text: '#9D93FF' },
+  failed:    { dot: '#FF6B35', text: '#FF6B35' },
+  pending:   { dot: '#555',    text: '#555' },
 }
 
 export default function Models() {
   const { token } = useAuth()
   const [models, setModels] = useState<Model[]>([])
   const [loading, setLoading] = useState(true)
+  const [filter, setFilter] = useState<'all' | 'classification' | 'regression' | 'clustering'>('all')
 
   useEffect(() => {
     fetchModels()
@@ -41,94 +49,283 @@ export default function Models() {
     } catch { setModels([]) }
     finally {
       setLoading(false)
-      gsap.fromTo('.model-row',
-        { opacity: 0, x: -20 },
-        { opacity: 1, x: 0, stagger: 0.05, duration: 0.4, ease: 'power3.out' }
-      )
+      setTimeout(() => {
+        gsap.fromTo('.model-row',
+          { opacity: 0, y: 16 },
+          { opacity: 1, y: 0, stagger: 0.06, duration: 0.4, ease: 'power3.out' }
+        )
+      }, 50)
     }
   }
 
-  return (
-    <div className="min-h-screen pt-24 pb-16 px-4" style={{ background: 'var(--bg-void)' }}>
-      <div className="max-w-5xl mx-auto">
+  const filtered = filter === 'all' ? models : models.filter(m => m.task_type === filter)
 
-        <div className="flex items-center justify-between mb-8">
+  const getMetric = (m: Model) => {
+    if (m.accuracy != null) return `${(m.accuracy * 100).toFixed(1)}%`
+    if (m.r2_score != null) return `R² ${m.r2_score.toFixed(3)}`
+    return '—'
+  }
+
+  const getMetricColor = (m: Model) => {
+    if (m.accuracy != null || m.r2_score != null) return '#00FFB3'
+    return 'rgba(255,255,255,0.2)'
+  }
+
+  return (
+    <div style={{ minHeight: '100vh', background: 'var(--bg-void)', paddingTop: '88px', paddingBottom: '60px' }}>
+
+      {/* Grid bg */}
+      <div style={{
+        position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0,
+        backgroundImage: 'linear-gradient(rgba(123,110,246,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(123,110,246,0.03) 1px, transparent 1px)',
+        backgroundSize: '64px 64px',
+      }} />
+
+      <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '0 28px', position: 'relative', zIndex: 1 }}>
+
+        {/* ── Header ── */}
+        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: '36px', flexWrap: 'wrap', gap: '16px' }}>
           <div>
-            <p className="text-xs text-[var(--text-muted)] mb-1" style={{ fontFamily: 'var(--font-mono)', letterSpacing: '0.1em' }}>MODELS</p>
-            <h1 className="text-3xl font-bold" style={{ letterSpacing: '-0.02em' }}>
-              My <span className="grad-text">Models</span>
+            <p style={{
+              fontFamily: 'var(--font-mono)', fontSize: '0.65rem',
+              letterSpacing: '0.15em', textTransform: 'uppercase',
+              color: 'rgba(123,110,246,0.5)', marginBottom: '8px',
+            }}>My Models</p>
+            <h1 style={{
+              fontFamily: 'var(--font-display)', fontWeight: 800,
+              fontSize: 'clamp(1.8rem, 4vw, 2.4rem)', letterSpacing: '-0.03em',
+              color: 'var(--text-primary)', margin: 0,
+            }}>
+              Trained{' '}
+              <span style={{
+                background: 'linear-gradient(135deg, #9D93FF, #00D4FF)',
+                WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
+              }}>Models</span>
             </h1>
           </div>
-          <Link to="/builder" data-hover className="btn-luna px-5 py-2.5 rounded-xl text-sm font-semibold relative z-10">
+
+          <Link to="/builder" data-hover style={{
+            display: 'inline-flex', alignItems: 'center', gap: '8px',
+            padding: '11px 22px', borderRadius: '12px', textDecoration: 'none',
+            fontSize: '0.875rem', fontWeight: 600, color: 'white',
+            background: 'linear-gradient(135deg, #7B6EF6, #5B4FD4)',
+            border: '1px solid rgba(155,147,255,0.3)',
+            boxShadow: '0 4px 16px rgba(123,110,246,0.25)',
+            transition: 'all 0.2s ease',
+          }}
+            onMouseEnter={e => {
+              const el = e.currentTarget as HTMLElement
+              el.style.transform = 'translateY(-1px)'
+              el.style.boxShadow = '0 6px 24px rgba(123,110,246,0.4)'
+            }}
+            onMouseLeave={e => {
+              const el = e.currentTarget as HTMLElement
+              el.style.transform = 'translateY(0)'
+              el.style.boxShadow = '0 4px 16px rgba(123,110,246,0.25)'
+            }}>
             + New Model
           </Link>
         </div>
 
+        {/* ── Filter tabs ── */}
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', flexWrap: 'wrap' }}>
+          {(['all', 'classification', 'regression', 'clustering'] as const).map(f => (
+            <button key={f} onClick={() => setFilter(f)} data-hover style={{
+              padding: '7px 16px', borderRadius: '8px', border: 'none', cursor: 'none',
+              fontFamily: 'var(--font-mono)', fontSize: '0.7rem',
+              letterSpacing: '0.08em', textTransform: 'capitalize',
+              transition: 'all 0.2s ease',
+              background: filter === f ? 'rgba(123,110,246,0.2)' : 'rgba(255,255,255,0.04)',
+              color: filter === f ? '#9D93FF' : 'rgba(255,255,255,0.3)',
+              border: `1px solid ${filter === f ? 'rgba(123,110,246,0.4)' : 'rgba(255,255,255,0.06)'}` as any,
+            }}>
+              {f === 'all' ? `All (${models.length})` : `${f} (${models.filter(m => m.task_type === f).length})`}
+            </button>
+          ))}
+        </div>
+
+        {/* ── Content ── */}
         {loading ? (
-          <div className="space-y-3">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {[...Array(4)].map((_, i) => (
-              <div key={i} className="glass rounded-xl h-16 animate-pulse" />
+              <div key={i} style={{
+                height: '68px', borderRadius: '14px',
+                background: 'rgba(255,255,255,0.03)',
+                border: '1px solid rgba(255,255,255,0.05)',
+                animation: 'pulse 1.5s ease-in-out infinite',
+              }} />
             ))}
           </div>
-        ) : models.length === 0 ? (
-          <div className="glass rounded-2xl p-16 text-center">
-            <div className="text-4xl mb-4 opacity-40">◈</div>
-            <h3 className="font-semibold mb-2">No models yet</h3>
-            <p className="text-sm text-[var(--text-secondary)] mb-6">Build your first ML model</p>
-            <Link to="/builder" data-hover className="btn-luna px-6 py-2.5 rounded-xl text-sm font-semibold relative z-10 inline-block">
-              Start Building
+        ) : filtered.length === 0 ? (
+          <div style={{
+            padding: '80px 24px', textAlign: 'center',
+            borderRadius: '20px',
+            background: 'rgba(255,255,255,0.02)',
+            border: '1px dashed rgba(255,255,255,0.07)',
+          }}>
+            <div style={{ fontSize: '3rem', marginBottom: '16px', opacity: 0.2 }}>◈</div>
+            <h3 style={{ fontWeight: 600, marginBottom: '10px', color: 'var(--text-primary)' }}>
+              {filter === 'all' ? 'No models yet' : `No ${filter} models`}
+            </h3>
+            <p style={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.25)', marginBottom: '28px' }}>
+              Build your first ML model in under a minute
+            </p>
+            <Link to="/builder" style={{
+              display: 'inline-flex', alignItems: 'center', gap: '6px',
+              padding: '11px 24px', borderRadius: '10px', textDecoration: 'none',
+              fontSize: '0.875rem', fontWeight: 600, color: 'white',
+              background: 'linear-gradient(135deg, #7B6EF6, #5B4FD4)',
+              boxShadow: '0 4px 16px rgba(123,110,246,0.25)',
+            }}>
+              Start Building →
             </Link>
           </div>
         ) : (
-          <div className="glass rounded-2xl overflow-hidden">
-            <div className="hidden md:grid grid-cols-12 gap-4 px-6 py-3 border-b border-[var(--border-subtle)] text-xs text-[var(--text-muted)] uppercase tracking-widest"
-              style={{ fontFamily: 'var(--font-mono)' }}>
-              <div className="col-span-5">Problem</div>
-              <div className="col-span-2">Task</div>
-              <div className="col-span-2">Status</div>
-              <div className="col-span-2">Accuracy</div>
-              <div className="col-span-1">—</div>
+          <div style={{
+            borderRadius: '18px', overflow: 'hidden',
+            border: '1px solid rgba(255,255,255,0.06)',
+            background: 'rgba(13,13,26,0.6)',
+            backdropFilter: 'blur(20px)',
+          }}>
+            {/* Table header */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: '2fr 120px 120px 100px 80px',
+              gap: '0',
+              padding: '14px 24px',
+              borderBottom: '1px solid rgba(255,255,255,0.05)',
+              background: 'rgba(255,255,255,0.02)',
+            }}>
+              {['Problem', 'Task', 'Status', 'Metric', ''].map((h, i) => (
+                <div key={i} style={{
+                  fontFamily: 'var(--font-mono)', fontSize: '0.6rem',
+                  letterSpacing: '0.12em', textTransform: 'uppercase',
+                  color: 'rgba(255,255,255,0.2)',
+                  textAlign: i === 4 ? 'right' : 'left',
+                }}>{h}</div>
+              ))}
             </div>
-            {models.map((m, i) => (
-              <div key={i} className="model-row grid grid-cols-1 md:grid-cols-12 gap-4 px-6 py-4 border-b border-[var(--border-subtle)] last:border-0 hover:bg-[var(--bg-glass)] transition-colors group">
-                <div className="md:col-span-5">
-                  <p className="text-sm font-medium line-clamp-1 group-hover:text-[var(--accent-luna-bright)] transition-colors">
-                    {m.name || m.problem_description?.slice(0, 60)}
-                  </p>
-                  <p className="text-xs text-[var(--text-muted)] mt-0.5" style={{ fontFamily: 'var(--font-mono)' }}>
-                    {new Date(m.created_at).toLocaleDateString()}
-                  </p>
-                </div>
-                <div className="md:col-span-2">
-                  <span className="tag text-xs">{m.task_type || '—'}</span>
-                </div>
-                <div className="md:col-span-2 flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                    style={{ background: STATUS_COLORS[m.status] || STATUS_COLORS.pending }} />
-                  <span className="text-xs capitalize" style={{ color: STATUS_COLORS[m.status] || STATUS_COLORS.pending, fontFamily: 'var(--font-mono)' }}>
-                    {m.status}
-                  </span>
-                </div>
-                <div className="md:col-span-2 flex items-center">
-                  {m.accuracy ? (
-                    <span className="text-sm font-mono" style={{ color: 'var(--accent-mint)' }}>
-                      {(m.accuracy * 100).toFixed(1)}%
+
+            {/* Rows */}
+            {filtered.map((m, i) => {
+              const tc = TASK_COLORS[m.task_type] || TASK_COLORS.classification
+              const sc = STATUS_CFG[m.status]    || STATUS_CFG.pending
+              return (
+                <div key={m.id} className="model-row" style={{
+                  display: 'grid',
+                  gridTemplateColumns: '2fr 120px 120px 100px 80px',
+                  gap: '0',
+                  padding: '18px 24px',
+                  borderBottom: i < filtered.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none',
+                  transition: 'background 0.2s ease',
+                  cursor: 'default',
+                }}
+                  onMouseEnter={e => (e.currentTarget.style.background = 'rgba(123,110,246,0.04)')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+
+                  {/* Problem */}
+                  <div style={{ paddingRight: '20px' }}>
+                    <p style={{
+                      fontSize: '0.9rem', fontWeight: 600,
+                      color: 'rgba(255,255,255,0.85)', marginBottom: '4px',
+                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                    }}>
+                      {m.name || m.problem_description?.slice(0, 60)}
+                    </p>
+                    <p style={{
+                      fontFamily: 'var(--font-mono)', fontSize: '0.62rem',
+                      color: 'rgba(255,255,255,0.2)',
+                    }}>
+                      {new Date(m.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                    </p>
+                  </div>
+
+                  {/* Task */}
+                  <div style={{ display: 'flex', alignItems: 'center' }}>
+                    <span style={{
+                      padding: '4px 12px', borderRadius: '6px',
+                      fontFamily: 'var(--font-mono)', fontSize: '0.62rem',
+                      letterSpacing: '0.06em', textTransform: 'uppercase',
+                      background: tc.bg, color: tc.text,
+                      border: `1px solid ${tc.border}`,
+                      whiteSpace: 'nowrap',
+                    }}>
+                      {m.task_type || '—'}
                     </span>
-                  ) : (
-                    <span className="text-xs text-[var(--text-muted)]">—</span>
-                  )}
+                  </div>
+
+                  {/* Status */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
+                    <div style={{
+                      width: '7px', height: '7px', borderRadius: '50%', flexShrink: 0,
+                      background: sc.dot,
+                      boxShadow: `0 0 8px ${sc.dot}80`,
+                      animation: m.status === 'training' ? 'pulse 1.5s ease-in-out infinite' : 'none',
+                    }} />
+                    <span style={{
+                      fontFamily: 'var(--font-mono)', fontSize: '0.72rem',
+                      color: sc.text, textTransform: 'capitalize',
+                    }}>
+                      {m.status}
+                    </span>
+                  </div>
+
+                  {/* Metric */}
+                  <div style={{ display: 'flex', alignItems: 'center' }}>
+                    <span style={{
+                      fontFamily: 'var(--font-mono)', fontSize: '0.82rem',
+                      fontWeight: 700, color: getMetricColor(m),
+                      textShadow: m.accuracy != null ? '0 0 12px rgba(0,255,179,0.3)' : 'none',
+                    }}>
+                      {getMetric(m)}
+                    </span>
+                  </div>
+
+                  {/* Action */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
+                    <Link to={`/models/${m.id}`} data-hover style={{
+                      fontFamily: 'var(--font-mono)', fontSize: '0.7rem',
+                      color: 'rgba(123,110,246,0.5)', textDecoration: 'none',
+                      padding: '5px 12px', borderRadius: '7px',
+                      border: '1px solid rgba(123,110,246,0.15)',
+                      background: 'rgba(123,110,246,0.06)',
+                      transition: 'all 0.2s ease',
+                      whiteSpace: 'nowrap',
+                    }}
+                      onMouseEnter={e => {
+                        const el = e.currentTarget as HTMLElement
+                        el.style.color = '#9D93FF'
+                        el.style.borderColor = 'rgba(123,110,246,0.4)'
+                        el.style.background = 'rgba(123,110,246,0.12)'
+                      }}
+                      onMouseLeave={e => {
+                        const el = e.currentTarget as HTMLElement
+                        el.style.color = 'rgba(123,110,246,0.5)'
+                        el.style.borderColor = 'rgba(123,110,246,0.15)'
+                        el.style.background = 'rgba(123,110,246,0.06)'
+                      }}>
+                      View →
+                    </Link>
+                  </div>
                 </div>
-                <div className="md:col-span-1 flex items-center justify-end">
-                  <Link to={`/models/${m.id}`} data-hover
-                    className="text-xs text-[var(--text-muted)] hover:text-[var(--accent-luna-bright)] transition-colors">
-                    View →
-                  </Link>
-                </div>
-              </div>
-            ))}
+              )
+            })}
+          </div>
+        )}
+
+        {/* ── Footer count ── */}
+        {!loading && filtered.length > 0 && (
+          <div style={{
+            marginTop: '16px', textAlign: 'right',
+            fontFamily: 'var(--font-mono)', fontSize: '0.65rem',
+            color: 'rgba(255,255,255,0.15)',
+          }}>
+            {filtered.length} model{filtered.length > 1 ? 's' : ''} total
           </div>
         )}
       </div>
+
+      <style>{`@keyframes pulse { 0%,100%{opacity:0.4} 50%{opacity:0.8} }`}</style>
     </div>
   )
 }
